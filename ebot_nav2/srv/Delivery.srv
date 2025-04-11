@@ -1,0 +1,7 @@
+# Delivery.srv
+bool start_delivery
+int32[] deliver_to
+---
+# Response part
+bool success   # indicate successful run of triggered service
+string message # informational, e.g. for error messages

@@ -1,0 +1,12 @@
+# DeliveryConfirmation.srv
+string confirmation_type
+int8 table_id   # For BotToTable Confirmation
+int8 confirm_table_id   # For TableToBot Confirmation
+bool reset
+bool start_delivery     # For Kitchen To Bot
+int32[] order_ready_list    # For Kitchen To Bot (list of orders the robot is currently holding)
+---
+# Response part
+bool success   # indicate successful run of triggered service
+string message # informational, e.g. for error messages
+int32[] order_ready_for

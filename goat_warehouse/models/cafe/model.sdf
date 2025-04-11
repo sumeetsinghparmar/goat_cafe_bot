@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <model name="cafe">
+    <static>true</static>
+    <link name="link">
+      <collision name="colloidable_objects">
+        <geometry>
+          <mesh>
+            <uri>model://cafe/meshes/cafe.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://cafe/meshes/cafe.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

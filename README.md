@@ -1,9 +1,7 @@
-Below is the complete `README.md` content in Markdown format. You can copy and paste this into your project's `README.md` file:
-
 ```markdown
-# 🦾 Robot Delivery System Web Interface
+# 🦾 Goat Cafe Bot Web Interface
 
-This project provides a web-based interface for a Robot Delivery System built using **ROS2**, **Node.js**, and **Socket.IO**. It offers two portals:
+This project provides a web-based interface for a Goat Cafe Bot built using **ROS2**, **Node.js**, and **Socket.IO**. It offers two portals:
 
 - **Customer Portal:** Where users can place and cancel orders.
 - **Kitchen Portal:** Where kitchen staff can view pending orders and confirm deliveries.
@@ -120,29 +118,6 @@ goat_cafe_web/
 
 - **Responsive and Modern UI:**  
   Both portals feature a playful, cartoonish design, thanks to Google Fonts and Font Awesome, offering a delightful user experience.
-
----
-
-## 💡 How to Customize
-
-- **Modifying Food Items:**  
-  In the customer portal (`customer.html`), you can update the default food items or add interactive selection mechanisms.
-
-- **Extending Robot States:**  
-  In the code, additional states (e.g., `nav_2_home`) can be added to the robot status logic in the client-side scripts.
-
-- **Adding More Features:**  
-  You can extend this project by adding authentication, multi-robot support, mobile responsiveness, or advanced analytics dashboards.
-
----
-
-## 🙋‍♂️ Contributing
-
-Feel free to fork the repository and submit pull requests! When contributing, please follow these guidelines:
-
-1. Write clean, modular code.
-2. Test your changes locally with both ROS2 and the web interface.
-3. Update documentation as needed.
 
 ---
 

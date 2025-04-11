@@ -1,0 +1,19 @@
+{
+  "name": "goat_cafe_web",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server",
+    "dev": "nodemon server"
+  },
+  "author": "Sumeet",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.9",
+    "rclnodejs": "^0.33.0",
+    "socket.io": "^4.8.1"
+  }
+}

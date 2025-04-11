@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cafe Customer Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Fredoka One', cursive;
+      background: #ffe9b6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    h1 {
+      color: #ff6f61;
+      margin-bottom: 20px;
+      text-shadow: 1px 1px 0 #fff;
+    }
+
+    #order-section {
+      background: #fff3da;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+
+    select, button {
+      font-family: 'Fredoka One', cursive;
+      margin: 10px;
+      padding: 10px 20px;
+      border-radius: 15px;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    select {
+      background-color: #fcd5ce;
+    }
+
+    button {
+      background-color: #ffb5a7;
+      color: white;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #f28c8c;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #status-section {
+      margin-top: 20px;
+    }
+
+    .order-card {
+      background: #fef9ef;
+      border-radius: 15px;
+      padding: 15px;
+      margin-top: 15px;
+      width: 320px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .order-status {
+      font-size: 1.1rem;
+      color: #444;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 1.8rem;
+      color: green;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .cancel-btn {
+      background-color: #ff6961;
+      color: white;
+    }
+
+    .fade-out {
+      animation: fadeOut 1s forwards;
+    }
+
+    @keyframes fadeOut {
+      to { opacity: 0; transform: scale(0.9); }
+    }
+
+    .confirm-btn {
+      background-color: #7ed957;
+      color: white;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 15px;
+      border: none;
+      margin-top: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .confirm-btn:hover {
+      background-color: #63c74d;
+    }
+
+  </style>
+</head>
+<body>
+  <h1><i class="fas fa-utensils"></i> Cafe Bot Order</h1>
+
+  <div id="order-section">
+    <label for="table-select">Choose Your Table:</label>
+    <select id="table-select">
+      <option value="1">Table 1</option>
+      <option value="2">Table 2</option>
+      <option value="3">Table 3</option>
+    </select>
+    <br>
+    <button id="order-btn"><i class="fas fa-paper-plane"></i> Order</button>
+  </div>
+
+  <div id="cards-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const orderBtn = document.getElementById('order-btn');
+    const tableSelect = document.getElementById('table-select');
+    const cardsContainer = document.getElementById('cards-container');
+
+    let activeOrders = {};
+
+    orderBtn.addEventListener('click', () => {
+      const table_id = parseInt(tableSelect.value);
+      if (activeOrders[table_id]) return;
+
+      socket.emit('make_order', { table_id });
+
+      const card = createOrderCard(table_id, "Processing Order...");
+      cardsContainer.appendChild(card);
+      activeOrders[table_id] = card;
+    });
+
+    socket.on('bot_state', (state) => {
+      console.log("Received bot state:", state);
+      const match = state.match(/^wait_table(\d+)/);
+      if (match) {
+        const table_id = parseInt(match[1]);
+        const card = activeOrders[table_id];
+        if (card) {
+          const statusText = card.querySelector('.order-status');
+          statusText.textContent = "Robot has arrived! Please confirm delivery.";
+
+          // ✅ Only add the confirm button if it doesn't already exist
+          if (!card.querySelector('.confirm-btn')) {
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'confirm-btn';
+            confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> Confirm';
+            confirmBtn.onclick = () => {
+              socket.emit('confirm_delivery', { table_id });
+              removeCard(table_id, "Order Delivered. Enjoy!");
+            };
+            card.appendChild(confirmBtn);
+
+            // Auto cancel if not clicked within 10 sec
+            setTimeout(() => {
+              if (card.contains(confirmBtn)) {
+                removeCard(table_id, "Order Canceled. Timeout.");
+              }
+            }, 10000);
+          }
+        }
+      } else if (state === "IDLE") {
+        // Only clean up cards that are stuck / completed
+        Object.keys(activeOrders).forEach(tid => {
+          const card = activeOrders[tid];
+          const statusText = card?.querySelector('.order-status')?.textContent || '';
+          
+          // Only remove if it's in a final state, not if it's still pending or waiting
+          const isFinalStatus = statusText.includes("Delivered") || statusText.includes("Canceled") || statusText.includes("Timeout");
+          if (isFinalStatus) {
+            removeCard(tid);
+          }
+        });
+      }
+    });
+
+
+    function createOrderCard(table_id, status) {
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.dataset.table = table_id;
+
+      const heading = document.createElement('h3');
+      heading.innerHTML = `<i class="fas fa-chair"></i> Table ${table_id}`;
+      card.appendChild(heading);
+
+      const statusP = document.createElement('p');
+      statusP.className = 'order-status';
+      statusP.textContent = status;
+      card.appendChild(statusP);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'cancel-btn';
+      cancelBtn.textContent = 'Cancel Order';
+      cancelBtn.onclick = () => {
+        socket.emit('cancel_order', { table_id });
+        removeCard(table_id, "Order Canceled by User");
+      };
+      card.appendChild(cancelBtn);
+
+      return card;
+    }
+
+    function removeCard(table_id, message) {
+      const card = activeOrders[table_id];
+      if (!card) return;
+      const status = card.querySelector('.order-status');
+      status.textContent = message || "Done!";
+      card.classList.add('fade-out');
+      setTimeout(() => {
+        card.remove();
+        delete activeOrders[table_id];
+      }, 1500);
+    }
+
+    socket.on('order_response', data => {
+      console.log('Order Response:', data);
+    });
+  </script>
+</body>
+</html>

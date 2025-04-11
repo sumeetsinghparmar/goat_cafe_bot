@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kitchen Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Fredoka One', cursive;
+      background: #ffe9b6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    h1 {
+      color: #ff6f61;
+      margin-bottom: 20px;
+      text-shadow: 1px 1px 0 #fff;
+    }
+
+    #status-section {
+      background: #ffe3c3;
+      padding: 20px 30px;
+      border-radius: 25px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      font-size: 1.3rem;
+      color: #ff6f61;
+      margin-bottom: 30px;
+      border: 2px dashed #ffb5a7;
+    }
+
+    #robot-status {
+      font-weight: bold;
+      color: #d14545;
+      padding: 8px 15px;
+      background-color: #fff;
+      border-radius: 12px;
+      border: 1px solid #ffd6cc;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+      margin-left: 15px;
+    }
+
+
+    #order-section {
+      background: #fff3da;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      text-align: center;
+      display: none;
+    }
+
+    .order-checkbox {
+      display: block;
+      margin: 10px 0;
+      font-size: 1.1rem;
+    }
+
+    button {
+      font-family: 'Fredoka One', cursive;
+      margin-top: 10px;
+      padding: 10px 20px;
+      border-radius: 15px;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #ffb5a7;
+      color: white;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #f28c8c;
+    }
+
+    #deliver-message {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <h1><i class="fas fa-utensils"></i> Kitchen Portal</h1>
+
+  <div id="status-section">
+    <i class="fas fa-robot"></i>
+    <div>Robot Status: <span id="robot-status">Loading...</span></div>
+  </div>
+
+  <div id="order-section">
+    <div id="order-list"></div>
+    <button id="deliver-btn"><i class="fas fa-paper-plane"></i> Deliver Order</button>
+    <div id="deliver-message"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const robotStatus = document.getElementById('robot-status');
+    const orderSection = document.getElementById('order-section');
+    const orderList = document.getElementById('order-list');
+    const deliverBtn = document.getElementById('deliver-btn');
+    const deliverMessage = document.getElementById('deliver-message');
+
+    let currentBotState = '';
+
+    // Function to update robot status with emojis
+    function updateRobotStatus(state) {
+      let statusEmoji = '';
+      switch(state) {
+        case 'IDLE':
+          statusEmoji = '😴 Idle at Home';
+          break;
+        case 'nav_2_kitchen':
+          statusEmoji = '🚚 Navigating to Kitchen';
+          break;
+        case 'wait_kitchen':
+          statusEmoji = '⏳ Waiting at Kitchen';
+          break;
+        case 'nav_2_kitchen_2_return_food':
+          statusEmoji = '🔁 Returning to Kitchen';
+          break;
+        case 'waiting_at_kitchen_2_return_food':
+          statusEmoji = '⏳ Waiting at Kitchen to Return Food';
+          break;
+        case 'nav_2_home':
+          statusEmoji = '🏠 Returning Home';
+          break;
+        case 'nav_2_table1':
+          statusEmoji = '🚚 Navigating to Table 1';
+          break;
+        case 'nav_2_table2':
+          statusEmoji = '🚚 Navigating to Table 2';
+          break;
+        case 'nav_2_table3':
+          statusEmoji = '🚚 Navigating to Table 3';
+          break;
+        case 'wait_table1':
+          statusEmoji = '⏳ Waiting at Table 1';
+          break;
+        case 'wait_table2': 
+          statusEmoji = '⏳ Waiting at Table 2';
+          break;
+        case 'wait_table3':
+          statusEmoji = '⏳ Waiting at Table 3';
+          break;
+        default:
+          statusEmoji = state
+      }
+      robotStatus.textContent = statusEmoji;
+    }
+
+    // Function to render pending orders as checkboxes
+    function renderPendingOrders(orders) {
+      const existingSelections = new Set(
+        Array.from(orderList.querySelectorAll('input[type="checkbox"]:checked'))
+          .map(cb => cb.value)
+      );
+
+      orderList.innerHTML = '';
+
+      orders.forEach(order => {
+        const label = document.createElement('label');
+        label.className = 'order-checkbox';
+        label.id = `order-${order.table_id}`;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = order.table_id;
+        checkbox.id = `checkbox-${order.table_id}`;
+
+        // Re-check if it was already selected before re-rendering
+        if (existingSelections.has(String(order.table_id))) {
+          checkbox.checked = true;
+        }
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(` Table ${order.table_id}`));
+        orderList.appendChild(label);
+      });
+    }
+
+
+    // Listen for bot state updates
+    socket.on('bot_state', (state) => {
+      currentBotState = state;
+      updateRobotStatus(state);
+
+      if (state === 'wait_kitchen') {
+        // Show order section when robot is waiting at kitchen
+        orderSection.style.display = 'block';
+        // Request pending orders
+        socket.emit('get_pending_orders');
+      } else {
+        // Hide order section otherwise
+        orderSection.style.display = 'none';
+      }
+    });
+
+    // Listen for pending orders
+    socket.on('pending_orders', (orders) => {
+      renderPendingOrders(orders);
+    });
+
+    // Handle deliver button click
+    deliverBtn.addEventListener('click', () => {
+      const selectedTables = Array.from(orderList.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(checkbox => parseInt(checkbox.value));
+
+      if (selectedTables.length === 0) {
+        alert('Please select at least one order to deliver.');
+        return;
+      }
+
+      // Emit deliver order event
+      socket.emit('deliver_order', { table_ids: selectedTables });
+
+      // Show delivery message
+      deliverMessage.textContent = '🚚 Going to deliver the Order...';
+      setTimeout(() => {
+        deliverMessage.textContent = '';
+      }, 5000);
+    });
+  </script>
+</body>
+</html>
